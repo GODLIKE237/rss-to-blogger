@@ -2,14 +2,14 @@ name: Run RSS to Blogger
 
 on:
   schedule:
-    - cron: '0 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up Python
@@ -23,8 +23,9 @@ jobs:
 
       - name: Run script
         env:
-          RSS_URL: ${{ secrets.RSS_URL }}
+          BLOGGERAPIKEY: ${{ secrets.BLOGGERAPIKEY }}
           BLOGGER_BLOG_ID: ${{ secrets.BLOGGER_BLOG_ID }}
-          BLOGGER_API_KEY: ${{ secrets.BLOGGER_API_KEY }}
+          RSS_URL: ${{ secrets.RSS_URL }}
         run: |
           python main.py
+          
