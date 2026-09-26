@@ -1,45 +1,58 @@
 import os
 import feedparser
 import requests
-from datetime import datetime
 
-# Configuration from GitHub Secrets
-RSS_URL = os.environ.get("RSS_URL")
-BLOGGER_BLOG_ID = os.environ.get("BLOGGER_BLOG_ID")
-BLOGGER_API_KEY = os.environ.get("BLOGGER_API_KEY")
+# GitHub Secrets se credentials uthana
+API_KEY = os.getenv("BLOGGERAPIKEY")
+BLOG_ID = os.getenv("BLOGGER_BLOG_ID")
+RSS_URL = os.getenv("RSS_URL")
 
-def get_latest_posts():
-    if not RSS_URL:
-        print("Error: RSS_URL is not set.")
-        return []
+def post_to_blogger(title, content, url):
+    endpoint = f"https://www.googleapis.com/blogger/v3/blogs/{BLOG_ID}/posts/"
     
-    feed = feedparser.parse(RSS_URL)
-    return feed.entries
-
-def post_to_blogger(title, content, link):
-    url = f"https://www.googleapis.com/blogger/v3/blogs/{BLOGGER_BLOG_ID}/posts/"
-    headers = {
-        'Authorization': f'Bearer {BLOGGER_API_KEY}',
-        'Content-Type': 'application/json'
-    }
-    
-    # Adding source link at the end of the post content
-    full_content = f"{content}<br><br><a href='{link}'>Read more from original source</a>"
+    # Content ko unique aur clean banane ke liye formatting
+    formatted_content = f"""
+    <p>{content}</p>
+    <br>
+    <hr>
+    <p><em>Source: Global News Desk</em></p>
+    """
     
     payload = {
         "title": title,
-        "content": full_content
+        "content": formatted_content
     }
     
-    response = requests.post(url, headers=headers, json=payload)
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    # Agar Blogger API key Bearer ki jagah query parameter (key=...) use karti hai toh endpoint adjust karein:
+    # Yahan hum standard OAuth/API key format use kar rahe hain
+    response = requests.post(f"{endpoint}?key={API_KEY}", json=payload)
     if response.status_code == 200:
         print(f"Successfully posted: {title}")
     else:
-        print(f"Failed to post {title}: {response.text}")
+        print(f"Failed to post: {response.text}")
+
+def main():
+    if not RSS_URL:
+        print("RSS URL not found!")
+        return
+
+    feed = feedparser.parse(RSS_URL)
+    
+    # Sabse latest news ko uthana
+    if feed.entries:
+        latest_entry = feed.entries[0]
+        title = latest_entry.title
+        summary = latest_entry.get("summary", latest_entry.get("description", ""))
+        link = latest_entry.link
+        
+        print(f"Processing news: {title}")
+        post_to_blogger(title, summary, link)
 
 if __name__ == "__main__":
-    entries = get_latest_posts()
-    if entries:
-        # Posting the latest entry as an example
-        latest = entries[0]
-        post_to_blogger(latest.title, latest.summary, latest.link)
+    main()
+    
